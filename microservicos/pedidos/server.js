@@ -7,13 +7,11 @@ const app = express();
 const PRODUTOS_URL =
     process.env.PRODUTOS_URL || "http://localhost:3001";
 
+const CLIENTES_URL =
+    process.env.CLIENTES_URL || "http://localhost:3003";
+
 app.use(express.json());
 
-const pedidos = [];
-
-/*app.get("/pedidos", (req, res) => {
-    res.json(pedidos);
-});*/
 
 app.get("/pedidos", async (req, res) => {
     try {
@@ -23,64 +21,34 @@ app.get("/pedidos", async (req, res) => {
 
         res.json(resultado.rows);
     } catch (erro) {
+        console.error(erro);
+
         res.status(500).json({
             erro: "Erro ao buscar pedidos"
         });
     }
 });
 
-/*app.post("/pedidos", async (req, res) => {
-    const { produtoId, quantidade } = req.body;
-
-    if (!produtoId || !quantidade || quantidade <= 0) {
-        return res.status(400).json({
-            erro: "produtoId e quantidade válida são obrigatórios"
-        });
-    }
-
-    try {
-        const resposta = await axios.get(
-            `${PRODUTOS_URL}/produtos/${produtoId}`,
-            {
-                timeout: 3000
-            }
-        );
-
-        const produto = resposta.data;
-
-        const pedido = {
-            id: pedidos.length + 1,
-            produto,
-            quantidade,
-            total: produto.preco * quantidade
-        };
-
-        pedidos.push(pedido);
-
-        res.status(201).json(pedido);
-    } catch (erro) {
-        if (erro.response?.status === 404) {
-            return res.status(400).json({
-                erro: "Produto não encontrado"
-            });
-        }
-
-        return res.status(503).json({
-            erro: "Serviço de Produtos indisponível"
-        });
-    }
-});*/
 
 app.post("/pedidos", async (req, res) => {
-    const { produtoId, quantidade } = req.body;
+    const { produtoId, cliente_id, quantidade } = req.body;
 
-    if (!produtoId || !quantidade || quantidade <= 0) {
+    if (!produtoId || !cliente_id || !quantidade || quantidade <= 0) {
         return res.status(400).json({
-            erro: "produtoId e quantidade válida são obrigatórios"
+            erro: "produtoId, cliente_id e quantidade válida são obrigatórios"
         });
     }
 
     try {
+
+        await axios.get(
+            `${CLIENTES_URL}/clientes/${cliente_id}`,
+            {
+                timeout: 3000
+            }
+        );
+
+
         const resposta = await axios.get(
             `${PRODUTOS_URL}/produtos/${produtoId}`,
             {
@@ -89,20 +57,24 @@ app.post("/pedidos", async (req, res) => {
         );
 
         const produto = resposta.data;
+
         const total = produto.preco * quantidade;
+
 
         const resultado = await db.query(
             `INSERT INTO pedidos (
-        produto_id,
-        nome_produto,
-        preco_unitario,
-        quantidade,
-        total
-      )
-      VALUES ($1, $2, $3, $4, $5)
-      RETURNING *`,
+                produto_id,
+                cliente_id,
+                nome_produto,
+                preco_unitario,
+                quantidade,
+                total
+            )
+            VALUES ($1, $2, $3, $4, $5, $6)
+            RETURNING *`,
             [
                 produto.id,
+                cliente_id,
                 produto.nome,
                 produto.preco,
                 quantidade,
@@ -111,18 +83,58 @@ app.post("/pedidos", async (req, res) => {
         );
 
         res.status(201).json(resultado.rows[0]);
+
     } catch (erro) {
-        if (erro.response?.status === 404) {
+
+        if (
+            erro.response?.status === 404 &&
+            erro.config?.url?.includes("/clientes/")
+        ) {
+            return res.status(404).json({
+                erro: "Cliente não encontrado"
+            });
+        }
+
+
+        if (
+            erro.response?.status === 404 &&
+            erro.config?.url?.includes("/produtos/")
+        ) {
             return res.status(400).json({
                 erro: "Produto não encontrado"
             });
         }
 
-        if (erro.code === "ECONNREFUSED" || erro.code === "ECONNABORTED") {
+
+        if (
+            erro.config?.url?.includes("/clientes/") &&
+            (
+                erro.code === "ECONNREFUSED" ||
+                erro.code === "ECONNABORTED" ||
+                erro.code === "ETIMEDOUT"
+            )
+        ) {
+            return res.status(503).json({
+                erro: "Serviço de Clientes indisponível"
+            });
+        }
+
+
+        if (
+            erro.config?.url?.includes("/produtos/") &&
+            (
+                erro.code === "ECONNREFUSED" ||
+                erro.code === "ECONNABORTED" ||
+                erro.code === "ETIMEDOUT"
+            )
+        ) {
             return res.status(503).json({
                 erro: "Serviço de Produtos indisponível"
             });
         }
+
+
+        console.error(erro);
 
         return res.status(500).json({
             erro: "Erro ao criar pedido"
@@ -130,19 +142,6 @@ app.post("/pedidos", async (req, res) => {
     }
 });
 
-/*app.get("/pedidos/:id", (req, res) => {
-    const pedido = pedidos.find(
-        p => p.id === Number(req.params.id)
-    );
-
-    if (!pedido) {
-        return res.status(404).json({
-            erro: "Pedido não encontrado"
-        });
-    }
-
-    res.json(pedido);
-});*/
 
 app.get("/pedidos/:id", async (req, res) => {
     try {
@@ -160,32 +159,45 @@ app.get("/pedidos/:id", async (req, res) => {
         }
 
         res.json(pedido);
+
     } catch (erro) {
+        console.error(erro);
+
         res.status(500).json({
             erro: "Erro ao buscar pedido"
         });
     }
 });
 
-app.use(express.json());
 
 async function criarTabela() {
     await db.query(`
         CREATE TABLE IF NOT EXISTS pedidos (
-        id SERIAL PRIMARY KEY,
-        produto_id INTEGER NOT NULL,
-        nome_produto VARCHAR(100) NOT NULL,
-        preco_unitario NUMERIC(10, 2) NOT NULL,
-        quantidade INTEGER NOT NULL,
-        total NUMERIC(10, 2) NOT NULL
+            id SERIAL PRIMARY KEY,
+            produto_id INTEGER NOT NULL,
+            cliente_id INTEGER NOT NULL,
+            nome_produto VARCHAR(100) NOT NULL,
+            preco_unitario NUMERIC(10, 2) NOT NULL,
+            quantidade INTEGER NOT NULL,
+            total NUMERIC(10, 2) NOT NULL
         )
     `);
 
     console.log("Tabela de pedidos pronta");
 }
 
-criarTabela();
 
-app.listen(3002, () => {
-    console.log("Pedidos rodando na porta 3002");
-});
+async function iniciar() {
+    try {
+        await criarTabela();
+
+        app.listen(3002, () => {
+            console.log("Pedidos rodando na porta 3002");
+        });
+
+    } catch (erro) {
+        console.error("Erro ao iniciar o servidor:", erro);
+    }
+}
+
+iniciar();
