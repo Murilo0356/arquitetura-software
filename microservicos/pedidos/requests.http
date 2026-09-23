@@ -12,3 +12,13 @@ Content-Type: application/json
 
 ### Buscar pedido por ID
 GET http://localhost:3002/pedidos/1
+
+### faz pedido com produto e cliente
+POST http://localhost:3000/pedidos
+Content-Type: application/json
+
+{
+  "produtoId": 2,
+  "cliente_id": 1,
+  "quantidade": 2
+}
