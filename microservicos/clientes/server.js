@@ -26,6 +26,82 @@ app.get("/", (req, res) => {
     });
 });
 
+app.post("/clientes", async (req, res) => {
+    try {
+        const { nome, sobrenome, telefone, email } = req.body;
+
+        if (!nome || !sobrenome || !email) {
+            return res.status(400).json({
+                erro: "nome, sobrenome e email são obrigatórios"
+            });
+        }
+
+        const resultado = await pool.query(
+            `
+            INSERT INTO clientes (nome, sobrenome, telefone, email)
+            VALUES ($1, $2, $3, $4)
+            RETURNING *
+            `,
+            [nome, sobrenome, telefone || null, email]
+        );
+
+        res.status(201).json(resultado.rows[0]);
+    } catch (erro) {
+        if (erro.code === "23505") {
+            return res.status(409).json({
+                erro: "Email já cadastrado"
+            });
+        }
+
+        console.error(erro);
+
+        res.status(500).json({
+            erro: "Erro ao cadastrar cliente"
+        });
+    }
+});
+
+app.get("/clientes", async (req, res) => {
+    try {
+        const resultado = await pool.query(
+            "SELECT * FROM clientes ORDER BY id"
+        );
+
+        res.json(resultado.rows);
+    } catch (erro) {
+        console.error(erro);
+
+        res.status(500).json({
+            erro: "Erro ao buscar clientes"
+        });
+    }
+});
+
+app.get("/clientes/:id", async (req, res) => {
+    try {
+        const { id } = req.params;
+
+        const resultado = await pool.query(
+            "SELECT * FROM clientes WHERE id = $1",
+            [id]
+        );
+
+        if (resultado.rows.length === 0) {
+            return res.status(404).json({
+                erro: "Cliente não encontrado"
+            });
+        }
+
+        res.json(resultado.rows[0]);
+    } catch (erro) {
+        console.error(erro);
+
+        res.status(500).json({
+            erro: "Erro ao buscar cliente"
+        });
+    }
+});
+
 async function iniciar() {
     try {
         await criarTabela();
