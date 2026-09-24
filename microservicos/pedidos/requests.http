@@ -1,7 +1,7 @@
 ### Listar pedidos
 GET http://localhost:3002/pedidos
 
-### Criar pedido
+### Criar pedido sem cliente
 POST http://localhost:3002/pedidos
 Content-Type: application/json
 

@@ -1,5 +1,5 @@
 ### Criar cliente
-POST http://localhost:3000/clientes
+POST http://localhost:3003/clientes
 Content-Type: application/json
 
 {
@@ -10,18 +10,7 @@ Content-Type: application/json
 }
 
 ### listar clientes
-GET http://localhost:3000/clientes
+GET http://localhost:3003/clientes
 
-### uscar cliente por ID
-GET http://localhost:3000/clientes/1
-
-### criar outro cliente
-POST http://localhost:3000/clientes
-Content-Type: application/json
-
-{
-  "nome": "Maria",
-  "sobrenome": "Santos",
-  "telefone": "44999998888",
-  "email": "maria@email.com"
-}
+### buscar cliente por ID
+GET http://localhost:3003/clientes/1
