@@ -6,7 +6,7 @@ Content-Type: application/json
   "nome": "João",
   "sobrenome": "Silva",
   "telefone": "44988887777",
-  "email": "teste@email.com"
+  "email": "teste2@email.com"
 }
 
 ### listar clientes

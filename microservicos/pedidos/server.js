@@ -12,7 +12,6 @@ const CLIENTES_URL =
 
 app.use(express.json());
 
-
 app.get("/pedidos", async (req, res) => {
     try {
         const resultado = await db.query(
@@ -29,25 +28,22 @@ app.get("/pedidos", async (req, res) => {
     }
 });
 
-
 app.post("/pedidos", async (req, res) => {
-    const { produtoId, cliente_id, quantidade } = req.body;
+    const { produtoId, clienteId, quantidade } = req.body;
 
-    if (!produtoId || !cliente_id || !quantidade || quantidade <= 0) {
+    if (!produtoId || !clienteId || !quantidade || quantidade <= 0) {
         return res.status(400).json({
-            erro: "produtoId, cliente_id e quantidade válida são obrigatórios"
+            erro: "produtoId, clienteId e quantidade válida são obrigatórios"
         });
     }
 
     try {
-
         await axios.get(
-            `${CLIENTES_URL}/clientes/${cliente_id}`,
+            `${CLIENTES_URL}/clientes/${clienteId}`,
             {
                 timeout: 3000
             }
         );
-
 
         const resposta = await axios.get(
             `${PRODUTOS_URL}/produtos/${produtoId}`,
@@ -57,9 +53,7 @@ app.post("/pedidos", async (req, res) => {
         );
 
         const produto = resposta.data;
-
         const total = produto.preco * quantidade;
-
 
         const resultado = await db.query(
             `INSERT INTO pedidos (
@@ -74,7 +68,7 @@ app.post("/pedidos", async (req, res) => {
             RETURNING *`,
             [
                 produto.id,
-                cliente_id,
+                clienteId,
                 produto.nome,
                 produto.preco,
                 quantidade,
@@ -85,7 +79,6 @@ app.post("/pedidos", async (req, res) => {
         res.status(201).json(resultado.rows[0]);
 
     } catch (erro) {
-
         if (
             erro.response?.status === 404 &&
             erro.config?.url?.includes("/clientes/")
@@ -95,7 +88,6 @@ app.post("/pedidos", async (req, res) => {
             });
         }
 
-
         if (
             erro.response?.status === 404 &&
             erro.config?.url?.includes("/produtos/")
@@ -104,7 +96,6 @@ app.post("/pedidos", async (req, res) => {
                 erro: "Produto não encontrado"
             });
         }
-
 
         if (
             erro.config?.url?.includes("/clientes/") &&
@@ -119,7 +110,6 @@ app.post("/pedidos", async (req, res) => {
             });
         }
 
-
         if (
             erro.config?.url?.includes("/produtos/") &&
             (
@@ -133,7 +123,6 @@ app.post("/pedidos", async (req, res) => {
             });
         }
 
-
         console.error(erro);
 
         return res.status(500).json({
@@ -141,7 +130,6 @@ app.post("/pedidos", async (req, res) => {
         });
     }
 });
-
 
 app.get("/pedidos/:id", async (req, res) => {
     try {
@@ -169,7 +157,6 @@ app.get("/pedidos/:id", async (req, res) => {
     }
 });
 
-
 async function criarTabela() {
     await db.query(`
         CREATE TABLE IF NOT EXISTS pedidos (
@@ -185,7 +172,6 @@ async function criarTabela() {
 
     console.log("Tabela de pedidos pronta");
 }
-
 
 async function iniciar() {
     try {

@@ -19,6 +19,6 @@ Content-Type: application/json
 
 {
   "produtoId": 2,
-  "cliente_id": 1,
+  "clienteId": 1,
   "quantidade": 2
 }
