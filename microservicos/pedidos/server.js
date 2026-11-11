@@ -1,8 +1,15 @@
+require("dotenv").config();
+
 const express = require("express");
 const axios = require("axios");
-const db = require("./db");
+const mongoose = require("mongoose");
+const connectDB = require("./db");
+
+
 
 const app = express();
+
+
 
 const PRODUTOS_URL =
     process.env.PRODUTOS_URL || "http://localhost:3001";
@@ -12,13 +19,24 @@ const CLIENTES_URL =
 
 app.use(express.json());
 
+
+const pedidoSchema = new mongoose.Schema({
+    produto_id: Number,
+    nome_produto: String,
+    preco_unitario: Number,
+    quantidade: Number,
+    total: Number
+});
+const Pedido = mongoose.model(
+    "Pedido",
+    pedidoSchema
+);
 app.get("/pedidos", async (req, res) => {
     try {
-        const resultado = await db.query(
-            "SELECT * FROM pedidos ORDER BY id"
-        );
+        const resultado = await Pedido.find().sort({ _id: 1 });
+        res.json(resultado);
 
-        res.json(resultado.rows);
+        res.json(resultado);
     } catch (erro) {
         console.error(erro);
 
