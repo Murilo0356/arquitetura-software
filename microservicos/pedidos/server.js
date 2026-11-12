@@ -1,5 +1,3 @@
-require("dotenv").config();
-
 const express = require("express");
 const axios = require("axios");
 const mongoose = require("mongoose");
@@ -14,6 +12,7 @@ const app = express();
 const PRODUTOS_URL =
     process.env.PRODUTOS_URL || "http://localhost:3001";
 
+    connectDB();
 const CLIENTES_URL =
     process.env.CLIENTES_URL || "http://localhost:3003";
 
@@ -148,15 +147,11 @@ app.post("/pedidos", async (req, res) => {
         });
     }
 });
-
 app.get("/pedidos/:id", async (req, res) => {
     try {
-        const resultado = await db.query(
-            "SELECT * FROM pedidos WHERE id = $1",
-            [req.params.id]
+        const pedido = await Pedido.findById(
+            req.params.id
         );
-
-        const pedido = resultado.rows[0];
 
         if (!pedido) {
             return res.status(404).json({
@@ -165,35 +160,14 @@ app.get("/pedidos/:id", async (req, res) => {
         }
 
         res.json(pedido);
-
     } catch (erro) {
-        console.error(erro);
-
         res.status(500).json({
             erro: "Erro ao buscar pedido"
         });
     }
 });
-
-async function criarTabela() {
-    await db.query(`
-        CREATE TABLE IF NOT EXISTS pedidos (
-            id SERIAL PRIMARY KEY,
-            produto_id INTEGER NOT NULL,
-            cliente_id INTEGER NOT NULL,
-            nome_produto VARCHAR(100) NOT NULL,
-            preco_unitario NUMERIC(10, 2) NOT NULL,
-            quantidade INTEGER NOT NULL,
-            total NUMERIC(10, 2) NOT NULL
-        )
-    `);
-
-    console.log("Tabela de pedidos pronta");
-}
-
 async function iniciar() {
     try {
-        await criarTabela();
 
         app.listen(3002, () => {
             console.log("Pedidos rodando na porta 3002");
